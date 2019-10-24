@@ -39,14 +39,14 @@ except:
 # import the c# classes for interfaceing with the Oxford
 
 
-ip_address=''
 
 
 class SPECTROMAG():
     """Thin wrapper around the xxx class, SPECTROMAG as stg """
         
-    def __init__(self, stg_address='GPIB0::1::INSTR'):
-        self.stg=rm.opem_resource(stg_address)
+    def __init__(self, itc_address='GPIB0::15::INSTR',ips_address='GPIB0::17::INSTR'):
+        self.itc=rm.opem_resource(itc_address)
+        self.ips=rm.open_resource(ips_address)
         self.TstatusDict={0:'unknown',1:'stable',2:'tracking',5:'near',6:'chasing'}
         self.FieldStatusDict={6:'ramp to field',4:'clamp',3:'ramp to zero',1:'hold'}
         
@@ -54,7 +54,7 @@ class SPECTROMAG():
         
     def getTemperature(self):
         """Return the current temperature, in Kelvin"""
-        Tstatus = self.stg.query('READ:DEV:UID:TEMP:SIG:TEMP')
+        Tstatus = self.itc.query('READ:DEV:UID:TEMP:SIG:TEMP')
         try:
             return str(Tstatus[1]),self.TstatusDict[Tstatus[2]]
         except:
@@ -65,8 +65,8 @@ class SPECTROMAG():
         temp -- the temperature in Kelvin
         rate -- the cooling / heating rate, in K / min
         """
-        self.stg.write('SET:DEV:UID:TEMP:LOOP:TSET '+str(temp))
-        self.stg.write('SET:')
+        self.itc.write('SET:DEV:UID:TEMP:LOOP:TSET '+str(temp))
+        self.itc.write('SET:')
         
         if stable==1:
             time.sleep(10)
@@ -80,7 +80,7 @@ class SPECTROMAG():
     def getField(self):
         """ return the current magnetic field, in Tesla"""
         I_H_rate=14.313               
-        PSU_curr=self.stg.query('READ:DEV:UID:PSU:SIG:CURR')
+        PSU_curr=self.ips.query('READ:DEV:UID:PSU:SIG:CURR')
         FieldStatus=PSU_curr/I_H_rate
         
         try:
@@ -89,7 +89,7 @@ class SPECTROMAG():
             return str(FieldStatus[1]), 'reconginze problem'
             
     def persistField(self):
-        self.stg.write('SET:DEV:UID:PSU:SIG:PFLD')
+        self.ips.write('SET:DEV:UID:PSU:SIG:PFLD')
     
         
     def setField(self, field, rate=100, holding_or_not=1, stable=1):
@@ -98,8 +98,8 @@ class SPECTROMAG():
         rate -- the field sweep rate, in Oe/second
         """
         
-        self.stg.write('SET:DEV:UID:PSU:SIG:FSET '+str(field))
-        self.stg.write('SET:DEV:UID:PSU:SIG:RFST '+str(rate))
+        self.ips.write('SET:DEV:UID:PSU:SIG:FSET '+str(field))
+        self.ips.write('SET:DEV:UID:PSU:SIG:RFST '+str(rate))
         
         
         if stable == 1:
