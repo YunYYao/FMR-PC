@@ -25,7 +25,7 @@ rm=visa.ResourceManager()
 
 
 # load the c#.dll supplied by Oxford
-
+'''
 try:
     clr.AddReference('')
 except: 
@@ -35,25 +35,26 @@ except:
         print('Found xx.dll at {}'.format(clr.FindAssembly('')))
         print('Try right-clicking the .dll, selecting "properities", and then clicking "Unblock"')
 '''
+
 # import the c# classes for interfaceing with the Oxford
-from Oxford.Oxrfod import *
+
 
 ip_address=''
 
 
 class SPECTROMAG():
-    """Thin wrapper around the xxx class"""
-    
-    def instrument(self):
+    """Thin wrapper around the xxx class, SPECTROMAG as stg """
         
-    def __init__(self):
-        self.instrument ={}
-        self.TstatusDict ={}
-        self.FieldStatusDict = {}
+    def __init__(self, stg_address='GPIB0::1::INSTR'):
+        self.stg=rm.opem_resource(stg_address)
+        self.TstatusDict={0:'unknown',1:'stable',2:'tracking',5:'near',6:'chasing'}
+        self.FieldStatusDict={6:'ramp to field',4:'clamp',3:'ramp to zero',1:'hold'}
+        
+    ''' iTC control TEMP, iPS control magnetic field'''
         
     def getTemperature(self):
         """Return the current temperature, in Kelvin"""
-        Tstatus = self.instrument.GetTemperature(0,0)
+        Tstatus = self.stg.query('READ:DEV:UID:TEMP:SIG:TEMP')
         try:
             return str(Tstatus[1]),self.TstatusDict[Tstatus[2]]
         except:
@@ -64,7 +65,8 @@ class SPECTROMAG():
         temp -- the temperature in Kelvin
         rate -- the cooling / heating rate, in K / min
         """
-        self.instrument.setTemperature(temp, rate,0)
+        self.stg.write('SET:DEV:UID:TEMP:LOOP:TSET '+str(temp))
+        self.stg.write('SET:')
         
         if stable==1:
             time.sleep(10)
@@ -76,22 +78,29 @@ class SPECTROMAG():
                 print 'Temperature is '+ Tstatus[0]+'K'
                 
     def getField(self):
-        """ return the current magnetic field, in gauss"""
-        
-        FieldStatus=self.instrument.GetField(0,0)
+        """ return the current magnetic field, in Tesla"""
+        I_H_rate=14.313               
+        PSU_curr=self.stg.query('READ:DEV:UID:PSU:SIG:CURR')
+        FieldStatus=PSU_curr/I_H_rate
         
         try:
             return str(FieldStatus[1]), self.FieldStatusDict[FieldStatus[2]]
         except:
             return str(FieldStatus[1]), 'reconginze problem'
             
+    def persistField(self):
+        self.stg.write('SET:DEV:UID:PSU:SIG:PFLD')
+    
+        
     def setField(self, field, rate=100, holding_or_not=1, stable=1):
         """
         field -- the value of magnetic field, in Oe
         rate -- the field sweep rate, in Oe/second
         """
         
-        self.instrument.SetField(field, rate, 0, holding_or_not )
+        self.stg.write('SET:DEV:UID:PSU:SIG:FSET '+str(field))
+        self.stg.write('SET:DEV:UID:PSU:SIG:RFST '+str(rate))
+        
         
         if stable == 1:
             time.sleep(10)
@@ -105,7 +114,7 @@ class SPECTROMAG():
         Tstatus =self.getTemperature()
         FieldStatus = self.getField()
         return Tstatus[0],Tstatus[1],FieldStatus[0],FieldStatus[1]
-'''      
+
 
 class PNA():
     """ N5234B, """
