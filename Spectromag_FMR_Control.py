@@ -221,7 +221,7 @@ class PNA():
     def fmr_text_init(self,pathfile):
         global COLUMNS
         freq=self.get_freq()
-        COLUMNS='h,'+freq
+        COLUMNS='H,'+freq
         print COLUMNS
         
         if not os.path.exists(pathfile):
