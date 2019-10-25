@@ -47,28 +47,40 @@ class SPECTROMAG():
     def __init__(self, itc_address='GPIB0::15::INSTR',ips_address='GPIB0::17::INSTR'):
         self.itc=rm.opem_resource(itc_address)
         self.ips=rm.open_resource(ips_address)
-        self.TstatusDict={0:'unknown',1:'stable',2:'tracking',5:'near',6:'chasing'}
-        self.FieldStatusDict={6:'ramp to field',4:'clamp',3:'ramp to zero',1:'hold'}
+        self.TstatusDict={0:'unknown',1:'stable',2:'tracking',5:'near',6:'chasing'}   #still need check
+        self.FieldStatusDict={6:'ramp to field',4:'clamp',3:'ramp to zero',1:'hold'}  # need check
+        itc_config=self.itc.write('READ:SYS:CAT')
+        ips_config=self.ips.write('READ:SYS:CAT')
+        
+        print 'iTC configuration:' itc_config
+        print 'iPS configuration:' ips_config
         
     ''' iTC control TEMP, iPS control magnetic field'''
         
     def getTemperature(self):
         """Return the current temperature, in Kelvin"""
-        Tstatus = self.itc.query('READ:DEV:UID:TEMP:SIG:TEMP')
+        Tstatus = self.itc.query('READ:DEV:DB7.T1:TEMP:SIG:TEMP')
+        return Tstatus
+        '''
         try:
             return str(Tstatus[1]),self.TstatusDict[Tstatus[2]]
         except:
             return str(Tstatus[1]),'recognize problem'
-            
-    def setTemperature(self,temp,rate=10, stable=1):
+        '''
+        
+    def setTemperature(self,temp,rate=10, ramp_mode='ON'):
         """
         temp -- the temperature in Kelvin
-        rate -- the cooling / heating rate, in K / min
+        rate -- the cooling / heating rate, in Kelvin / min
+        set ramp rate >> ramp mode on >> set temp
         """
-        self.itc.write('SET:DEV:UID:TEMP:LOOP:TSET '+str(temp))
-        self.itc.write('SET:')
+        self.itc.write('SET:DEV:DB7.T1:TEMP:LOOP:RSET:'+str(rate))
+        self.itc.write('SET:DEV:DB7.T1:TEMP:LOOP:RENA:'+ramp_mode)
+        self.itc.write('SET:DEV:DB7.T1:TEMP:LOOP:TSET:'+str(temp))
         
-        if stable==1:
+        Tstatus=self.getTemperature()
+        
+        if stable==1:                             # need check
             time.sleep(10)
             Tstatus=self.getTemperature()
             
@@ -80,26 +92,39 @@ class SPECTROMAG():
     def getField(self):
         """ return the current magnetic field, in Tesla"""
         I_H_rate=14.313               
-        PSU_curr=self.ips.query('READ:DEV:UID:PSU:SIG:CURR')
-        FieldStatus=PSU_curr/I_H_rate
-        
+        FieldStatus=self.ips.query('READ:DEV:GRPZ:PSU:SIG:FLD')
+        PSU_curr=FieldStatus*I_H_rate
+        return FieldStatus
+        '''
         try:
             return str(FieldStatus[1]), self.FieldStatusDict[FieldStatus[2]]
         except:
             return str(FieldStatus[1]), 'reconginze problem'
-            
+        '''
+        
+    def Field_Temp(self):
+        ''' the temperature of magnet, only read'''
+        
+        return self.itc.query('READ:DEV:MB1.T1:TEMP:SIG:TEMP')
+        
+    
     def persistField(self):
         self.ips.write('SET:DEV:UID:PSU:SIG:PFLD')
     
         
-    def setField(self, field, rate=100, holding_or_not=1, stable=1):
+    def setField(self, field, current, rate=100, stable=1):
         """
-        field -- the value of magnetic field, in Oe
-        rate -- the field sweep rate, in Oe/second
-        """
+        field -- the value of magnetic field, in Tesla
+        current -- the correspond PSU current of setpoint field, in A
+        rate -- the PSU ramping rate, in A/min
         
-        self.ips.write('SET:DEV:UID:PSU:SIG:FSET '+str(field))
-        self.ips.write('SET:DEV:UID:PSU:SIG:RFST '+str(rate))
+        set magnet curr >> set curr rate >> set magnet field
+        
+        """
+        self.ips.write('SET:DEV:GRPZ:PSU:SIG:CSET:'+str(current))
+        self.ips.write('SET:DEV:GRPZ:PSU:SIG:RCST:'+str(rate))
+        self.ips.write('SET:DEV:GRPZ:PSU:SIG:ACTN:POTS:'+str(field))
+        FieldStatus=self.getField()
         
         
         if stable == 1:
