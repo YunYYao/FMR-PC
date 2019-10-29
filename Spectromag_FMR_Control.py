@@ -142,7 +142,7 @@ class SPECTROMAG():
 
 
 class PNA():
-    """ N5234B, """
+    """ N5234B, MY58421516 """
     
     def __init__(self,pna_address='GPIB0::1::INSTR'):
         self.pna=rm.open_resource(pna_address)
@@ -188,11 +188,14 @@ class PNA():
     def auto_scale(self):
         self.pna.write(':DISP:WIND1:TRAC1:Y:AUTO')
     
-    def set_sweep_mode(self,mode='hold'):
+    def set_trigger(self,mode='hold'):
         """trigger types:
         HOLD,CONTiunous,GROups,SINgle
         """
         self.pna.write(':sens1:swe:mode '+mode)
+        
+    def set_sweep_type(self, sweep_type='LIN'):
+        self.pna.write(':sens1:swe:type '+ sweep_type)
         
     def set_sweep_time(self, sweep_time):
         self.pna.write(':sens1:sew:time:auto off')
