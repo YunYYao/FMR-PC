@@ -144,7 +144,7 @@ class SPECTROMAG():
 class PNA():
     """ N5234B, MY58421516 """
     
-    def __init__(self,pna_address='GPIB0::1::INSTR'):
+    def __init__(self,pna_address='GPIB0::30::INSTR'):
         self.pna=rm.open_resource(pna_address)
         
     def set_measure_type(self, measure_type='S21'):
@@ -206,7 +206,7 @@ class PNA():
         return line
         
     def get_freq(self):
-        return self.pna.query(':SENS1:FREQ:DATA?') 
+        return self.pna.query(':calc1:meas1:x?') 
     
     
     def fmr_init(self,measure_type='S21',freq_start=500e3,freq_stop=43e9,points=1601,power=-25,ave=16,IF=10e3,sweep_time=0):
@@ -235,22 +235,23 @@ class PNA():
     def fmr_measure(self, pathfile, field, field_ramp):
         global DATA
         self.fmr_text_init(pathfile)
+        field_end=0
         stg=SPECTROMAG()
         stg.setField(field)
         stg.setField(0,field_ramp,stable=0)
-        field=float(stg.getField()[0])
+        field_actual=float(stg.getField()[0])
         data_last=DATA
         
-        while abs(field)>1:
+        while abs(field_actual-field_end)>1:
             s21=ReadLine(1)
-            field=float(stg.getField()[0])
-            DATA=str(field)+','+s21
+            field_actual=float(stg.getField()[0])
+            DATA=str(field_actual)+','+s21
             if not DATA==data_last:
                 f1=open(pathfile, 'a')
                 f1.write(DATA)
                 f1.close()
                 data_last=DATA
-                print field
+                print field_actual
                 time.sleep(0.5)
 '''
                 
