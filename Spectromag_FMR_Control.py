@@ -173,7 +173,8 @@ class PNA():
         
     def set_power(self, power= -25):
         """ unit in dB"""
-        self.pna.write(':sour1:pow:att '+ str(power))
+        #self.pna.write(':sens1:pow:att arec'+ str(power))
+        self.pna.write('sour1:pow1 '+str(power))
         
     def set_on_off(self, on_off='ON'):
         self.pna.write(':OUTP '+on_off)
