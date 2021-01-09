@@ -76,8 +76,7 @@ class PPMS():
                 time.sleep(10)
                 print 'Temperature is ' +Tstatus[0]+'K'
                 
-        
-
+                
     def waitForTemperature(self, delay=5, timeout=600):
         """Pause execution until the PPMS reaches the temperature setpoint."""
         return self.qdi_instrument.WaitFor(True, False, False, False, delay, timeout)
